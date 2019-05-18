@@ -100,6 +100,19 @@ class ImageDataBunch(DataBunch):
                              device=device, no_check=no_check)
 
     @classmethod
+    def create_from_ll_no_shuffle(cls, lls:LabelLists, bs:int=64, val_bs:int=None, ds_tfms:Optional[TfmList]=None,
+                num_workers:int=defaults.cpus, dl_tfms:Optional[Collection[Callable]]=None, device:torch.device=None,
+                test:Optional[PathOrStr]=None, collate_fn:Callable=data_collate, size:int=None, no_check:bool=False,
+                resize_method:ResizeMethod=None, mult:int=None, padding_mode:str='reflection',
+                mode:str='bilinear', tfm_y:bool=False)->'ImageDataBunch':
+        "Create an `ImageDataBunch` from `LabelLists` `lls` with potential `ds_tfms`."
+        lls = lls.transform(tfms=ds_tfms, size=size, resize_method=resize_method, mult=mult, padding_mode=padding_mode,
+                            mode=mode, tfm_y=tfm_y)
+        if test is not None: lls.add_test_folder(test)
+        return lls.databunch_no_shuffle(bs=bs, val_bs=val_bs, dl_tfms=dl_tfms, num_workers=num_workers, collate_fn=collate_fn,
+                             device=device, no_check=no_check)
+
+    @classmethod
     def from_folder(cls, path:PathOrStr, train:PathOrStr='train', valid:PathOrStr='valid',
                     valid_pct=None, classes:Collection=None, **kwargs:Any)->'ImageDataBunch':
         "Create from imagenet style dataset in `path` with `train`,`valid`,`test` subfolders (or provide `valid_pct`)."
@@ -118,6 +131,15 @@ class ImageDataBunch(DataBunch):
                 .split_by_rand_pct(valid_pct)
                 .label_from_df(label_delim=label_delim, cols=label_col))
         return cls.create_from_ll(src, **kwargs)
+
+    @classmethod
+    def from_df_no_shuffle(cls, path:PathOrStr, df:pd.DataFrame, folder:PathOrStr=None, label_delim:str=None, valid_pct:float=0.2,
+                fn_col:IntsOrStrs=0, label_col:IntsOrStrs=1, suffix:str='', **kwargs:Any)->'ImageDataBunch':
+        "Create from a `DataFrame` `df`."
+        src = (ImageList.from_df(df, path=path, folder=folder, suffix=suffix, cols=fn_col)
+                .split_by_rand_pct(valid_pct)
+                .label_from_df(label_delim=label_delim, cols=label_col))
+        return cls.create_from_ll_no_shuffle(src, **kwargs)
 
     @classmethod
     def from_csv(cls, path:PathOrStr, folder:PathOrStr=None, label_delim:str=None, csv_labels:PathOrStr='labels.csv',

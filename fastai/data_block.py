@@ -552,6 +552,19 @@ class LabelLists(ItemLists):
             data.normalize((norm['mean'], norm['std']), do_x=norm['do_x'], do_y=norm['do_y'])
         data.label_list = self
         return data
+    
+    def databunch_no_shuffle(self, path:PathOrStr=None, bs:int=64, val_bs:int=None, num_workers:int=defaults.cpus,
+                  dl_tfms:Optional[Collection[Callable]]=None, device:torch.device=None, collate_fn:Callable=data_collate,
+                  no_check:bool=False, **kwargs)->'DataBunch':
+        "Create an `DataBunch` from self, `path` will override `self.path`, `kwargs` are passed to `DataBunch.create`."
+        path = Path(ifnone(path, self.path))
+        data = self.x._bunch.create_no_shuffle(self.train, self.valid, test_ds=self.test, path=path, bs=bs, val_bs=val_bs,
+                                    num_workers=num_workers, device=device, collate_fn=collate_fn, no_check=no_check, **kwargs)
+        if getattr(self, 'normalize', False):#In case a normalization was serialized
+            norm = self.normalize
+            data.normalize((norm['mean'], norm['std']), do_x=norm['do_x'], do_y=norm['do_y'])
+        data.label_list = self
+        return data
 
     def add_test(self, items:Iterator, label:Any=None):
         "Add test set containing `items` with an arbitrary `label`."
